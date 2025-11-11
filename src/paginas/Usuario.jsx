@@ -16,14 +16,14 @@ export function Usuario() {
   const [formUsuario, setFormUsuario] = useState({
     nombre: "",
     celular: "",
-    correo: "",
+    email: "", // ✅ CAMBIADO DE correo → email
   });
   const [editingId, setEditingId] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 🔄 Escuchar cambios en tiempo real desde Firestore
+  // 🔄 Obtener usuarios de Firestore
   useEffect(() => {
     const q = query(collection(db, "usuarios"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -44,17 +44,18 @@ export function Usuario() {
     setSuccessMsg("");
   };
 
-  // 💾 Guardar (crear o actualizar)
+  // 💾 Guardar / Actualizar
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { nombre, celular, correo } = formUsuario;
+    const { nombre, celular, email } = formUsuario;
 
-    if (!nombre || !celular || !correo) {
+    if (!nombre || !celular || !email) {
       setErrorMsg("⚠️ Por favor completa todos los campos antes de guardar.");
       return;
     }
 
     setLoading(true);
+
     try {
       if (editingId) {
         await updateDoc(doc(db, "usuarios", editingId), formUsuario);
@@ -63,22 +64,20 @@ export function Usuario() {
         await addDoc(collection(db, "usuarios"), formUsuario);
       }
 
-      setFormUsuario({ nombre: "", celular: "", correo: "" });
-      setErrorMsg("");
+      setFormUsuario({ nombre: "", celular: "", email: "" });
 
-      // 🎉 Mostrar animación de éxito
+      // 🎉 Confetti
       confetti({
         particleCount: 80,
         spread: 60,
         origin: { y: 0.6 },
         colors: ["#ec4899", "#f9a8d4", "#fbcfe8"],
       });
-      setSuccessMsg("💖 ¡Usuario guardado con éxito!");
 
-      // Ocultar mensaje luego de unos segundos
+      setSuccessMsg("💖 ¡Usuario guardado con éxito!");
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (error) {
-      console.error("Error al guardar el usuario:", error);
+      console.error("Error:", error);
       setErrorMsg("❌ Ocurrió un error al guardar el usuario.");
     } finally {
       setLoading(false);
@@ -90,7 +89,7 @@ export function Usuario() {
     setFormUsuario({
       nombre: user.nombre || "",
       celular: user.celular || "",
-      correo: user.correo || "",
+      email: user.email || "", // ✅ SE USA EMAIL
     });
     setEditingId(user.id);
     setErrorMsg("");
@@ -100,21 +99,18 @@ export function Usuario() {
   // ❌ Cancelar edición
   const handleCancelEdit = () => {
     setEditingId(null);
-    setFormUsuario({ nombre: "", celular: "", correo: "" });
+    setFormUsuario({ nombre: "", celular: "", email: "" });
     setErrorMsg("");
   };
 
   // 🗑️ Eliminar usuario
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm(
-      "¿Seguro que deseas eliminar este usuario? 🗑️"
-    );
-    if (!confirmDelete) return;
+    if (!window.confirm("¿Seguro que deseas eliminar este usuario? 🗑️")) return;
 
     try {
       await deleteDoc(doc(db, "usuarios", id));
     } catch (error) {
-      console.error("Error al eliminar usuario:", error);
+      console.error("Error:", error);
       alert("❌ No se pudo eliminar el usuario.");
     }
   };
@@ -159,17 +155,20 @@ export function Usuario() {
           <label className="block text-pink-600 font-medium mb-2">Correo</label>
           <input
             type="email"
-            name="correo"
-            value={formUsuario.correo}
+            name="email"
+            value={formUsuario.email}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-400"
             placeholder="Tu correo electrónico..."
           />
         </div>
 
-        {/* Mensajes */}
-        {errorMsg && <p className="text-red-500 text-sm mb-4 font-medium">{errorMsg}</p>}
-        {successMsg && <p className="text-green-500 text-sm mb-4 font-medium">{successMsg}</p>}
+        {errorMsg && (
+          <p className="text-red-500 text-sm mb-4 font-medium">{errorMsg}</p>
+        )}
+        {successMsg && (
+          <p className="text-green-500 text-sm mb-4 font-medium">{successMsg}</p>
+        )}
 
         <div className="flex gap-3">
           <button
@@ -192,11 +191,12 @@ export function Usuario() {
         </div>
       </form>
 
-      {/* 📋 Lista de usuarios */}
+      {/* 📋 Lista */}
       <div className="mt-10 w-full max-w-md">
         <h2 className="text-xl font-semibold text-pink-600 mb-4 text-center">
           🌸 Usuarios Registrados 🌸
         </h2>
+
         <ul className="space-y-3">
           {usuarios.map((user) => (
             <li
@@ -207,11 +207,10 @@ export function Usuario() {
                 <span className="font-bold text-pink-700">{user.nombre}</span>
                 <div className="text-sm text-pink-500">
                   <div>{user.celular}</div>
-                  <div>{user.correo}</div>
+                  <div>{user.email}</div> {/* ✅ AHORA SE MUESTRA EMAIL */}
                 </div>
               </div>
 
-              {/* Botones de acción */}
               <div className="ml-4 flex items-center space-x-2">
                 <button
                   onClick={() => handleEdit(user)}

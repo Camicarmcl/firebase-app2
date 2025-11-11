@@ -13,7 +13,7 @@ function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Inicio />} />
-        <Route path="/usuario" element={<Usuario />} />
+        <Route path="/usuarios" element={<Usuario />} />
         <Route path="/productos" element={<Productos />} />
         <Route path="/post" element={<Post />} />
         <Route path="/carrito" element={<Carrito />} />

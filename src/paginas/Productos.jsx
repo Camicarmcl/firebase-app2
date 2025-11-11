@@ -14,14 +14,19 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+// ✅ Importamos el Carrito
+import { useCarrito } from "../paginas/CarritoContext.jsx";
+
 export function Productos() {
+  const { agregarAlCarrito } = useCarrito(); // ✅ función del carrito
+
   const [imagen, setImagen] = useState(null);
   const [nombre, setNombre] = useState("");
   const [categoria, setCategoria] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [subiendo, setSubiendo] = useState(false);
   const [productos, setProductos] = useState([]);
-  const [busqueda, setBusqueda] = useState(""); // 🔍 Nuevo estado para la búsqueda
+  const [busqueda, setBusqueda] = useState("");
 
   const [editando, setEditando] = useState(null);
   const [nuevoNombre, setNuevoNombre] = useState("");
@@ -31,6 +36,9 @@ export function Productos() {
   const [guardando, setGuardando] = useState(false);
 
   const [notificacion, setNotificacion] = useState({ mensaje: "", tipo: "" });
+
+  // ✅ Estado del contador individual
+  const [contador, setContador] = useState({});
 
   // 🔄 Escuchar productos
   useEffect(() => {
@@ -49,7 +57,7 @@ export function Productos() {
 
     setSubiendo(true);
     try {
-      const imagenRef = ref(Storage, `Imagenes/${imagen.name}`);
+      const imagenRef = ref(storage, `Imagenes/${imagen.name}`);
       await uploadBytes(imagenRef, imagen);
       const urlDescarga = await getDownloadURL(imagenRef);
 
@@ -92,7 +100,7 @@ export function Productos() {
 
     try {
       if (nuevaImagen) {
-        const imagenRef = ref(Storage, `Imagenes/${nuevaImagen.name}`);
+        const imagenRef = ref(storage, `Imagenes/${nuevaImagen.name}`);
         await uploadBytes(imagenRef, nuevaImagen);
         nuevaUrl = await getDownloadURL(imagenRef);
       }
@@ -115,25 +123,50 @@ export function Productos() {
     }
   };
 
-  // 🌈 Notificación
+  // Notificación
   const mostrarNotificacion = (mensaje, tipo) => {
     setNotificacion({ mensaje, tipo });
     setTimeout(() => setNotificacion({ mensaje: "", tipo: "" }), 2500);
   };
 
-  // 🎨 Colores notificación
   const estilos = {
     exito: { color: "bg-green-500", icono: "✅" },
     eliminar: { color: "bg-red-500", icono: "🗑️" },
     error: { color: "bg-yellow-500", icono: "⚠️" },
   };
 
-  // 🔎 Filtrar productos según búsqueda
+  // Filtrar productos
   const productosFiltrados = productos.filter(
     (p) =>
       p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       p.categoria.toLowerCase().includes(busqueda.toLowerCase())
   );
+
+  // ✅ Cambiar cantidad del contador
+  const cambiarCantidad = (id, tipo) => {
+    setContador((prev) => {
+      const actual = prev[id] || 1;
+      if (tipo === "sumar") return { ...prev, [id]: actual + 1 };
+      if (tipo === "restar" && actual > 1)
+        return { ...prev, [id]: actual - 1 };
+      return prev;
+    });
+  };
+
+  // ✅ Agregar al carrito
+  const añadirCarrito = (producto) => {
+    const cantidadElegida = contador[producto.id] || 1;
+
+    agregarAlCarrito({
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precio || 10, // por si tienes precio después
+      imagenUrl: producto.imagenUrl,
+      cantidad: cantidadElegida,
+    });
+
+    mostrarNotificacion("Producto agregado al carrito 🛒", "exito");
+  };
 
   return (
     <div className="min-h-screen bg-pink-50 p-6 relative">
@@ -218,105 +251,126 @@ export function Productos() {
       </div>
 
       {/* 🛍️ Lista filtrada */}
-      {productosFiltrados.length === 0 ? (
-        <p className="text-center text-gray-500">
-          No se encontraron productos que coincidan 😢
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {productosFiltrados.map((producto) => (
-            <div
-              key={producto.id}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-pink-200 transition transform hover:-translate-y-1"
-            >
-              <img
-                src={producto.imagenUrl}
-                alt={producto.nombre}
-                className="w-full h-56 object-cover"
-              />
-              <div className="p-4 text-center">
-                {editando === producto.id ? (
-                  <>
-                    <input
-                      type="text"
-                      value={nuevoNombre}
-                      onChange={(e) => setNuevoNombre(e.target.value)}
-                      className="w-full p-1 border rounded-md mb-2"
-                    />
-                    <input
-                      type="text"
-                      value={nuevaCategoria}
-                      onChange={(e) => setNuevaCategoria(e.target.value)}
-                      className="w-full p-1 border rounded-md mb-2"
-                    />
-                    <input
-                      type="number"
-                      value={nuevaCantidad}
-                      onChange={(e) => setNuevaCantidad(e.target.value)}
-                      className="w-full p-1 border rounded-md mb-2"
-                    />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setNuevaImagen(e.target.files[0])}
-                      className="w-full mb-3 border p-1 rounded-md"
-                    />
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => guardarCambios(producto.id)}
-                        disabled={guardando}
-                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md"
-                      >
-                        {guardando ? "Guardando..." : "Guardar"}
-                      </button>
-                      <button
-                        onClick={() => setEditando(null)}
-                        className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1 rounded-md"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="text-lg font-bold text-gray-800">
-                      {producto.nombre}
-                    </h2>
-                    <p className="text-pink-500 font-medium">
-                      {producto.categoria}
-                    </p>
-                    <p className="text-gray-600 text-sm mt-1">
-                      Cantidad:{" "}
-                      <span className="font-semibold">
-                        {producto.cantidad}
-                      </span>
-                    </p>
-                    <div className="flex justify-center gap-3 mt-4">
-                      <button
-                        onClick={() => {
-                          setEditando(producto.id);
-                          setNuevoNombre(producto.nombre);
-                          setNuevaCategoria(producto.categoria);
-                          setNuevaCantidad(producto.cantidad);
-                        }}
-                        className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md"
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button
-                        onClick={() => eliminarProducto(producto.id)}
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md"
-                      >
-                        🗑️ Eliminar
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        {productosFiltrados.map((producto) => (
+          <div
+            key={producto.id}
+            className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-pink-200 transition transform hover:-translate-y-1"
+          >
+            <img
+              src={producto.imagenUrl}
+              alt={producto.nombre}
+              className="w-full h-56 object-cover"
+            />
+
+            <div className="p-4 text-center">
+              {/* MODO EDICIÓN */}
+              {editando === producto.id ? (
+                <>
+                  <input
+                    type="text"
+                    value={nuevoNombre}
+                    onChange={(e) => setNuevoNombre(e.target.value)}
+                    className="w-full p-1 border rounded-md mb-2"
+                  />
+                  <input
+                    type="text"
+                    value={nuevaCategoria}
+                    onChange={(e) => setNuevaCategoria(e.target.value)}
+                    className="w-full p-1 border rounded-md mb-2"
+                  />
+                  <input
+                    type="number"
+                    value={nuevaCantidad}
+                    onChange={(e) => setNuevaCantidad(e.target.value)}
+                    className="w-full p-1 border rounded-md mb-2"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setNuevaImagen(e.target.files[0])}
+                    className="w-full mb-3 border p-1 rounded-md"
+                  />
+                  <div className="flex justify-center gap-2">
+                    <button
+                      onClick={() => guardarCambios(producto.id)}
+                      disabled={guardando}
+                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md"
+                    >
+                      {guardando ? "Guardando..." : "Guardar"}
+                    </button>
+                    <button
+                      onClick={() => setEditando(null)}
+                      className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1 rounded-md"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Vista normal */}
+                  <h2 className="text-lg font-bold text-gray-800">{producto.nombre}</h2>
+                  <p className="text-pink-500 font-medium">{producto.categoria}</p>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Stock:{" "}
+                    <span className="font-semibold">{producto.cantidad}</span>
+                  </p>
+
+                  {/* ✅ CONTADOR */}
+                  <div className="flex items-center justify-center gap-3 mt-4">
+                    <button
+                      onClick={() => cambiarCantidad(producto.id, "restar")}
+                      className="bg-pink-300 w-8 h-8 rounded-full text-white"
+                    >
+                      -
+                    </button>
+
+                    <span className="text-lg font-bold">
+                      {contador[producto.id] || 1}
+                    </span>
+
+                    <button
+                      onClick={() => cambiarCantidad(producto.id, "sumar")}
+                      className="bg-pink-500 w-8 h-8 rounded-full text-white"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {/* ✅ BOTÓN AGREGAR AL CARRITO */}
+                  <button
+                    onClick={() => añadirCarrito(producto)}
+                    className="mt-4 bg-pink-500 hover:bg-pink-600 text-white w-full py-2 rounded-full shadow-md"
+                  >
+                    🛒 Agregar al carrito
+                  </button>
+
+                  <div className="flex justify-center gap-3 mt-4">
+                    <button
+                      onClick={() => {
+                        setEditando(producto.id);
+                        setNuevoNombre(producto.nombre);
+                        setNuevaCategoria(producto.categoria);
+                        setNuevaCantidad(producto.cantidad);
+                      }}
+                      className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md"
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      onClick={() => eliminarProducto(producto.id)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md"
+                    >
+                      🗑️ Eliminar
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

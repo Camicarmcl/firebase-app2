@@ -18,6 +18,7 @@ export default function Registro() {
     confirmPassword: "",
     foto: null,
   });
+
   const [error, setError] = useState("");
 
   const handleChange = (e) => {
@@ -32,6 +33,7 @@ export default function Registro() {
     e.preventDefault();
     setError("");
 
+    // ✅ Validaciones
     if (!form.nombre || !form.email || !form.password || !form.confirmPassword) {
       return setError("⚠ Todos los campos son obligatorios");
     }
@@ -40,8 +42,10 @@ export default function Registro() {
     }
 
     try {
+      // ✅ Crear usuario en Auth
       const userCred = await registrar(form.email, form.password);
 
+      // ✅ SUBIR FOTO (opcional)
       let photoURL = "";
       if (form.foto) {
         const storageRef = ref(storage, `usuarios/${userCred.user.uid}/${form.foto.name}`);
@@ -49,6 +53,7 @@ export default function Registro() {
         photoURL = await getDownloadURL(storageRef);
       }
 
+      // ✅ Guardar datos del usuario en Firestore
       await setDoc(doc(db, "usuarios", userCred.user.uid), {
         nombre: form.nombre,
         email: form.email,
@@ -56,8 +61,10 @@ export default function Registro() {
         createdAt: new Date(),
       });
 
+      // 🎉 Confetti kawaii
       confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
 
+      // ✅ Redirigir con mensaje
       setTimeout(() => {
         alert("🌸 ¡Registro exitoso! Ahora puedes iniciar sesión.");
         navigate("/login");
@@ -79,7 +86,9 @@ export default function Registro() {
         <h2 className="text-3xl font-bold text-center text-pink-600 mb-6">🌷 Crear Cuenta 🌷</h2>
 
         {error && (
-          <p className="text-red-500 text-sm text-center bg-red-100 p-2 rounded-xl mb-4">{error}</p>
+          <p className="text-red-500 text-sm text-center bg-red-100 p-2 rounded-xl mb-4">
+            {error}
+          </p>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -89,6 +98,7 @@ export default function Registro() {
             className="w-full p-3 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-400"
             onChange={handleChange}
           />
+
           <input
             name="email"
             type="email"
@@ -96,6 +106,7 @@ export default function Registro() {
             className="w-full p-3 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-400"
             onChange={handleChange}
           />
+
           <input
             name="password"
             type="password"
@@ -103,6 +114,7 @@ export default function Registro() {
             className="w-full p-3 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-400"
             onChange={handleChange}
           />
+
           <input
             name="confirmPassword"
             type="password"
@@ -110,6 +122,8 @@ export default function Registro() {
             className="w-full p-3 border border-pink-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-400"
             onChange={handleChange}
           />
+
+          {/* ✅ Foto opcional */}
           <input
             type="file"
             name="foto"
@@ -138,3 +152,5 @@ export default function Registro() {
     </div>
   );
 }
+
+

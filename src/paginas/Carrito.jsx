@@ -204,11 +204,17 @@ export default function Carrito() {
                   className="flex items-center justify-between bg-pink-100/60 rounded-xl p-4 shadow-sm hover:shadow-md transition-all"
                 >
                   <div className="flex items-center gap-4">
-                    <img
-                      src={item.img}
-                      alt={item.nombre}
-                      className="w-16 h-16 object-cover rounded-lg border border-pink-200"
-                    />
+                    
+                   <img
+  src={item.imagenUrl} // ✅ usar la propiedad correcta
+  alt={item.nombre}
+  className="w-16 h-16 object-cover rounded-lg border border-pink-200"
+/>
+
+
+
+
+
                     <div>
                       <h3 className="text-lg font-semibold text-pink-700">
                         {item.nombre}
